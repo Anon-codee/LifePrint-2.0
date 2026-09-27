@@ -9,11 +9,9 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
-  Droplets,
   Filter,
   HeartPulse,
   Info,
-  Moon,
   Search,
 } from 'lucide-react';
 
