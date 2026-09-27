@@ -1,56 +1,275 @@
+
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1e293b;
-  --color-surface: #0f172a;
-  --color-background: #020617;
-  
-  --color-accent: #3b82f6;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-neutral: #64748b;
+  --color-primary: #285943;
+  --color-surface: #ffffff;
+  --color-background: #f7f8f5;
+  --color-accent: #285943;
+  --color-success: #39866b;
+  --color-warning: #c58a43;
+  --color-danger: #bd665c;
+  --color-neutral: #758078;
+
+  --font-sans: "Inter", "Segoe UI", sans-serif;
 }
 
-@layer base {
-  :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+:root {
+  font-family: "Inter", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+  --background: 100 18% 97%;
+  --foreground: 155 22% 17%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 155 22% 17%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 155 22% 17%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+  --primary: 153 38% 25%;
+  --primary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+  --secondary: 135 21% 89%;
+  --secondary-foreground: 153 38% 25%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+  --muted: 100 15% 95%;
+  --muted-foreground: 145 8% 43%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+  --accent: 135 21% 89%;
+  --accent-foreground: 153 38% 25%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
+  --destructive: 5 43% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 110 12% 89%;
+  --input: 110 12% 89%;
+  --ring: 153 38% 25%;
 }
 
 @layer base {
   * {
-    border-color: #1e293b;
+    box-sizing: border-box;
   }
+
   body {
-    background-color: #020617;
-    color: #f8fafc;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    margin: 0;
+    min-width: 320px;
+    background: #f7f8f5;
+    color: #263a30;
   }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  ::selection {
+    background: #dce9dd;
+    color: #244b38;
+  }
+
+  :focus-visible {
+    outline: 2px solid #39866b;
+    outline-offset: 3px;
+  }
+}
+
+/* Reusable LifePrint design elements */
+
+.lp-card {
+  background: #ffffff;
+  border: 1px solid #e5e9e3;
+  border-radius: 18px;
+  box-shadow: 0 4px 22px rgba(31, 58, 43, 0.035);
+}
+
+.lp-glass {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(221, 230, 222, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.lp-page-title {
+  color: #203b2c;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+
+.lp-muted {
+  color: #78867b;
+}
+
+.lp-button {
+  background: #285943;
+  color: #ffffff;
+  border-radius: 11px;
+  padding: 10px 16px;
+  font-weight: 550;
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.lp-button:hover {
+  background: #1d4432;
+  transform: translateY(-1px);
+}
+
+/*
+ * Temporary compatibility layer.
+ *
+ * Existing LifePrint pages use hardcoded dark Tailwind
+ * classes. These scoped overrides keep them readable
+ * until we replace each page's styling properly.
+ */
+
+.lifeprint-app [class~="bg-slate-950"],
+.lifeprint-app [class~="bg-slate-900"] {
+  background-color: #ffffff;
+}
+
+.lifeprint-app [class~="bg-slate-800"] {
+  background-color: #eef2ed;
+}
+
+.lifeprint-app [class~="text-slate-100"],
+.lifeprint-app [class~="text-slate-200"] {
+  color: #253b2d;
+}
+
+.lifeprint-app [class~="text-slate-300"] {
+  color: #42564a;
+}
+
+.lifeprint-app [class~="text-slate-400"] {
+  color: #64776a;
+}
+
+.lifeprint-app [class~="text-slate-500"] {
+  color: #849287;
+}
+
+.lifeprint-app [class~="text-slate-600"] {
+  color: #9ba79d;
+}
+
+.lifeprint-app [class~="border-slate-700"],
+.lifeprint-app [class~="border-slate-800"] {
+  border-color: #e4e9e2;
+}
+
+.lifeprint-app [class~="text-blue-400"],
+.lifeprint-app [class~="text-blue-500"],
+.lifeprint-app [class~="text-violet-300"],
+.lifeprint-app [class~="text-violet-400"] {
+  color: #347553;
+}
+
+.lifeprint-app [class~="bg-blue-500"],
+.lifeprint-app [class~="bg-violet-500"] {
+  background-color: #347553;
+}
+
+.lifeprint-app [class~="text-amber-300"],
+.lifeprint-app [class~="text-amber-400"] {
+  color: #b67a3f;
+}
+
+.lifeprint-app [class~="text-emerald-300"],
+.lifeprint-app [class~="text-emerald-400"] {
+  color: #348367;
+}
+
+.lifeprint-app select,
+.lifeprint-app input,
+.lifeprint-app textarea {
+  color: #2c4334;
+  accent-color: #285943;
+}
+
+.lifeprint-app select option {
+  background: #ffffff;
+  color: #263a30;
+}
+
+/* Scrollbars */
+
+.lifeprint-app ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.lifeprint-app ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lifeprint-app ::-webkit-scrollbar-thumb {
+  background: #d5dfd5;
+  border-radius: 20px;
+}
+
+.lifeprint-app ::-webkit-scrollbar-thumb:hover {
+  background: #a9bcab;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Temporary light-theme fixes for older pages */
+
+.lifeprint-app [class*="bg-slate-950"],
+.lifeprint-app [class*="bg-slate-900"],
+.lifeprint-app [class*="bg-slate-800"],
+.lifeprint-app [class*="bg-slate-700"] {
+  background-color: #ffffff;
+}
+
+.lifeprint-app [class*="border-slate-"] {
+  border-color: #e5eae4;
+}
+
+.lifeprint-app [class*="text-slate-100"],
+.lifeprint-app [class*="text-slate-200"] {
+  color: #263a30;
+}
+
+.lifeprint-app [class*="text-slate-300"],
+.lifeprint-app [class*="text-slate-400"] {
+  color: #64776a;
+}
+
+.lifeprint-app [class*="bg-violet-500/"],
+.lifeprint-app [class*="bg-blue-500/"] {
+  background-color: #eaf2eb;
+}
+
+.lifeprint-app [class*="border-violet-500/"],
+.lifeprint-app [class*="border-blue-500/"] {
+  border-color: #cbded0;
+}
+
+/* Prevent old dark card hover styles returning */
+.lifeprint-app [class*="hover:bg-slate-"]:hover {
+  background-color: #f2f6f1;
 }

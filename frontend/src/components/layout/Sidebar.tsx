@@ -1,51 +1,136 @@
+
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Calendar, TrendingUp, Network, Calculator, UserCircle, Activity } from 'lucide-react';
+import {
+  LayoutDashboard,
+  CalendarDays,
+  ChartNoAxesCombined,
+  Network,
+  SlidersHorizontal,
+  UserRound,
+  Activity,
+  ArrowUpRight,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-export function Sidebar() {
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Daily Logs', path: '/logs', icon: Calendar },
-    { name: 'Timeline', path: '/timeline', icon: TrendingUp },
-    { name: 'Health Graph', path: '/graph', icon: Network },
-    { name: 'What-If', path: '/what-if', icon: Calculator },
-    { name: 'My Profile', path: '/profile', icon: UserCircle },
-  ];
+const navItems = [
+  { name: 'Overview', path: '/', icon: LayoutDashboard },
+  { name: 'Daily Logs', path: '/logs', icon: CalendarDays },
+  { name: 'Timeline', path: '/timeline', icon: ChartNoAxesCombined },
+  { name: 'Health Graph', path: '/graph', icon: Network },
+  { name: 'What-If Simulator', path: '/what-if', icon: SlidersHorizontal },
+  { name: 'My Profile', path: '/profile', icon: UserRound },
+];
 
+export function Sidebar() {
   return (
-    <aside className="w-64 border-r border-slate-800 bg-slate-950 flex flex-col h-screen shrink-0 sticky top-0 hidden md:flex">
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 shrink-0">
-        <Activity className="w-6 h-6 text-blue-500 mr-3" />
-        <div>
-          <h1 className="font-semibold text-slate-100 leading-none">LifePrint</h1>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Personal Health Intelligence</p>
+    <aside className="hidden h-screen w-[252px] shrink-0 flex-col border-r border-[#E5EBE4] bg-[#FCFDFB] md:flex">
+      {/* Brand */}
+      <div className="flex h-[88px] shrink-0 items-center gap-3 border-b border-[#EDF0EB] px-6">
+        <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#285943]">
+          <Activity
+            className="h-[23px] w-[23px] text-white"
+            strokeWidth={2.1}
+          />
+        </div>
+
+        <div className="min-w-0">
+          <h1 className="text-[20px] font-semibold tracking-[-0.055em] text-[#233F30]">
+            LifePrint
+          </h1>
+
+          <p className="mt-0.5 text-[10px] font-medium tracking-[0.045em] text-[#91A096]">
+            YOUR HEALTH, IN CONTEXT
+          </p>
         </div>
       </div>
-      
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
+
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto px-4 py-7">
+        <p className="mb-4 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9BA89E]">
+          Workspace
+        </p>
+
+        <nav
+          aria-label="Main navigation"
+          className="space-y-1.5"
+        >
+          {navItems.map(item => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                cn(
+                  'group flex min-h-[46px] items-center gap-3 rounded-xl px-3.5 text-[13px] font-medium transition-all duration-200',
+                  isActive
+                    ? 'bg-[#E7F0E8] text-[#285943]'
+                    : 'text-[#75847A] hover:bg-[#F0F4EF] hover:text-[#285943]'
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon
+                    className={cn(
+                      'h-[18px] w-[18px] shrink-0',
+                      isActive
+                        ? 'text-[#285943]'
+                        : 'text-[#94A398] group-hover:text-[#285943]'
+                    )}
+                    strokeWidth={isActive ? 2.2 : 1.8}
+                  />
+
+                  <span className="flex-1">
+                    {item.name}
+                  </span>
+
+                  {isActive && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#477D5C]" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Small informational panel */}
+        <div className="mt-10 rounded-2xl border border-[#DCE8DE] bg-[#F1F6F0] p-4">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#477D5C]">
+            <Activity className="h-[18px] w-[18px]" />
+          </div>
+
+          <h3 className="text-[13px] font-semibold text-[#31543C]">
+            Your health, over time
+          </h3>
+
+          <p className="mt-2 text-[12px] leading-[1.65] text-[#7B9080]">
+            Explore your personal trends, patterns
+            and hypothetical scenarios.
+          </p>
+
           <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200",
-                isActive 
-                  ? "bg-blue-500/10 text-blue-400" 
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
-              )
-            }
+            to="/timeline"
+            className="mt-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#356B48] hover:text-[#214C32]"
           >
-            <item.icon className="w-5 h-5" />
-            {item.name}
+            Explore timeline
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </NavLink>
-        ))}
-      </nav>
-      
-      <div className="p-4 border-t border-slate-800">
-        <div className="text-xs text-slate-500 text-center">
-          Prototype Mode
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="shrink-0 border-t border-[#EDF0EB] px-6 py-5">
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[#73A884]" />
+
+          <span className="text-[11px] font-medium text-[#788A7D]">
+            Research prototype
+          </span>
+        </div>
+
+        <p className="mt-1.5 pl-4 text-[10px] text-[#A1ACA3]">
+          LifePrint 2.0
+        </p>
       </div>
     </aside>
   );

@@ -1,30 +1,29 @@
 
-import { useEffect, useMemo, useState } from 'react';
-import { api } from '../api/client';
-import { useUser } from '../context/UserContext';
-import { Card, CardContent } from '../components/ui/Card';
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  AlertCircle,
   ArrowDownRight,
   ArrowUpRight,
   BrainCircuit,
-  CalendarDays,
   ChevronDown,
-  ChevronUp,
+  ChevronRight,
+  Clock3,
   HeartPulse,
   Info,
-  Minus,
   Shield,
-} from 'lucide-react';
+  TrendingUp,
+} from "lucide-react";
 
-type BaselineSignal = {
-  current: number | null;
-  baseline: number | null;
-  deviation_percent: number | null;
+import { api } from "../api/client";
+import { useUser } from "../context/UserContext";
+
+type SignalStats = {
+  current: number;
+  baseline: number;
+  deviation_percent: number;
   trend: string;
-  trend_change: number | null;
-  volatility: number | null;
+  trend_change: number;
+  volatility: number;
   history_days: number;
 };
 
@@ -32,12 +31,12 @@ type BaselineResponse = {
   user_id: string;
   date: string;
   baseline_window_days: number;
-  signals: Record<string, BaselineSignal>;
+  signals: Record<string, SignalStats>;
 };
 
 type Pattern = {
   signal: string;
-  direction: 'above' | 'below';
+  direction: "above" | "below";
   outcome: string;
   exposed_days: number;
   comparison_days: number;
@@ -57,497 +56,344 @@ type PatternsResponse = {
   patterns: Pattern[];
 };
 
-type Metric = {
+type SignalConfig = {
   key: string;
   label: string;
   unit: string;
   decimals: number;
 };
 
-const GROUPS: {
+const SIGNAL_GROUPS: {
   title: string;
   description: string;
-  metrics: Metric[];
+  signals: SignalConfig[];
 }[] = [
   {
-    title: 'Lifestyle & Routine',
-    description: 'Daily habits and activity',
-    metrics: [
-      { key: 'sleep_hours', label: 'Sleep', unit: 'h', decimals: 1 },
-      { key: 'hydration_liters', label: 'Hydration', unit: 'L', decimals: 1 },
-      { key: 'stress', label: 'Stress', unit: '/10', decimals: 1 },
-      { key: 'activity_steps', label: 'Activity', unit: 'steps', decimals: 0 },
-      { key: 'caffeine', label: 'Caffeine', unit: 'servings', decimals: 1 },
+    title: "Daily habits",
+    description: "Sleep, hydration, movement and caffeine.",
+    signals: [
+      {
+        key: "sleep_hours",
+        label: "Sleep",
+        unit: "h",
+        decimals: 1,
+      },
+      {
+        key: "hydration_liters",
+        label: "Hydration",
+        unit: "L",
+        decimals: 1,
+      },
+      {
+        key: "stress",
+        label: "Stress",
+        unit: "/10",
+        decimals: 1,
+      },
+      {
+        key: "activity_steps",
+        label: "Activity",
+        unit: "steps",
+        decimals: 0,
+      },
+      {
+        key: "caffeine",
+        label: "Caffeine",
+        unit: "servings",
+        decimals: 1,
+      },
     ],
   },
   {
-    title: 'Vital Signs',
-    description: 'Recorded physiological measurements',
-    metrics: [
-      { key: 'heart_rate', label: 'Heart Rate', unit: 'bpm', decimals: 0 },
-      { key: 'resting_hr', label: 'Resting Heart Rate', unit: 'bpm', decimals: 0 },
-      { key: 'systolic_bp', label: 'Systolic BP', unit: 'mmHg', decimals: 0 },
-      { key: 'diastolic_bp', label: 'Diastolic BP', unit: 'mmHg', decimals: 0 },
-      { key: 'temperature_c', label: 'Temperature', unit: '°C', decimals: 1 },
+    title: "Vital measurements",
+    description: "Heart rate, blood pressure and temperature.",
+    signals: [
+      {
+        key: "heart_rate",
+        label: "Heart rate",
+        unit: "bpm",
+        decimals: 0,
+      },
+      {
+        key: "resting_hr",
+        label: "Resting heart rate",
+        unit: "bpm",
+        decimals: 0,
+      },
+      {
+        key: "systolic_bp",
+        label: "Systolic BP",
+        unit: "mmHg",
+        decimals: 0,
+      },
+      {
+        key: "diastolic_bp",
+        label: "Diastolic BP",
+        unit: "mmHg",
+        decimals: 0,
+      },
+      {
+        key: "temperature_c",
+        label: "Temperature",
+        unit: "°C",
+        decimals: 1,
+      },
+      {
+        key: "weight_kg",
+        label: "Weight",
+        unit: "kg",
+        decimals: 1,
+      },
     ],
   },
   {
-    title: 'Body & Recovery',
-    description: 'Body measurements and recovery indicators',
-    metrics: [
-      { key: 'weight_kg', label: 'Weight', unit: 'kg', decimals: 1 },
-      { key: 'calories', label: 'Calories', unit: 'kcal', decimals: 0 },
-      { key: 'sleep_quality', label: 'Sleep Quality', unit: '', decimals: 1 },
-      { key: 'recovery', label: 'Recovery', unit: '', decimals: 1 },
+    title: "Energy and recovery",
+    description: "Daily energy expenditure and recovery indicators.",
+    signals: [
+      {
+        key: "calories",
+        label: "Calories",
+        unit: "kcal",
+        decimals: 0,
+      },
+      {
+        key: "sleep_quality",
+        label: "Sleep quality",
+        unit: "/100",
+        decimals: 0,
+      },
+      {
+        key: "recovery",
+        label: "Recovery",
+        unit: "/100",
+        decimals: 0,
+      },
     ],
   },
 ];
 
-const METRICS = GROUPS.flatMap(group => group.metrics);
-
-const OUTCOMES: Record<string, string> = {
-  headache: 'Headache',
-  bp_elevation: 'BP Elevation',
-  fatigue: 'Fatigue',
-  dehydration_risk: 'Dehydration Risk',
-  poor_sleep: 'Poor Sleep',
-  stress_overload: 'Stress Overload',
-  recovery_deterioration: 'Recovery Deterioration',
+const OUTCOME_LABELS: Record<string, string> = {
+  headache: "Headache",
+  bp_elevation: "BP elevation",
+  fatigue: "Fatigue",
+  dehydration_risk: "Dehydration risk",
+  poor_sleep: "Poor sleep",
+  stress_overload: "Stress overload",
+  recovery_deterioration: "Recovery deterioration",
 };
 
-function labelFor(key: string): string {
+const SIGNAL_LABELS = Object.fromEntries(
+  SIGNAL_GROUPS.flatMap((group) =>
+    group.signals.map((signal) => [
+      signal.key,
+      signal.label,
+    ])
+  )
+);
+
+function prettyLabel(value: string) {
   return (
-    METRICS.find(metric => metric.key === key)?.label ||
-    OUTCOMES[key] ||
-    key.replace(/_/g, ' ')
+    SIGNAL_LABELS[value] ??
+    OUTCOME_LABELS[value] ??
+    value
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
   );
 }
 
-function formatNumber(
-  value: number | null | undefined,
+function formatValue(
+  value: number | undefined,
   decimals = 1
-): string {
-  if (value == null || !Number.isFinite(value)) return '—';
+) {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value)
+  ) {
+    return "—";
+  }
 
-  return value.toLocaleString('en-US', {
+  return value.toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
-function formatMetric(
-  value: number | null | undefined,
-  metric: Metric
-): string {
-  const formatted = formatNumber(value, metric.decimals);
+function getTrendText(trend: string) {
+  switch (trend.toLowerCase()) {
+    case "increasing":
+    case "rising":
+    case "up":
+      return "Increasing";
 
-  return formatted === '—'
-    ? formatted
-    : `${formatted}${metric.unit ? ` ${metric.unit}` : ''}`;
-}
+    case "decreasing":
+    case "falling":
+    case "down":
+      return "Decreasing";
 
-function signed(
-  value: number | null | undefined,
-  suffix = '%'
-): string {
-  if (value == null || !Number.isFinite(value)) return '—';
+    case "stable":
+      return "Stable";
 
-  return `${value > 0 ? '+' : ''}${value.toFixed(1)}${suffix}`;
-}
-
-function formatDate(value?: string): string {
-  if (!value) return 'Unavailable';
-
-  const [year, month, day] = value
-    .slice(0, 10)
-    .split('-')
-    .map(Number);
-
-  if (!year || !month || !day) return 'Unavailable';
-
-  return new Date(year, month - 1, day).toLocaleDateString(
-    'en-US',
-    { month: 'short', day: 'numeric', year: 'numeric' }
-  );
-}
-
-function TrendIndicator({ trend }: { trend?: string }) {
-  const normalized = (trend || '').toLowerCase();
-
-  if (
-    normalized.includes('increas') ||
-    normalized.includes('rising') ||
-    normalized === 'up'
-  ) {
-    return (
-      <span className="flex items-center gap-1 text-xs text-blue-400">
-        <ArrowUpRight className="h-3.5 w-3.5" />
-        Increasing
-      </span>
-    );
+    default:
+      return prettyLabel(trend || "Unknown");
   }
-
-  if (
-    normalized.includes('decreas') ||
-    normalized.includes('falling') ||
-    normalized === 'down'
-  ) {
-    return (
-      <span className="flex items-center gap-1 text-xs text-violet-400">
-        <ArrowDownRight className="h-3.5 w-3.5" />
-        Decreasing
-      </span>
-    );
-  }
-
-  return (
-    <span className="flex items-center gap-1 text-xs text-slate-400">
-      <Minus className="h-3.5 w-3.5" />
-      {trend || 'Unavailable'}
-    </span>
-  );
 }
 
-function MetricCard({
-  metric,
-  signal,
+function SignalCard({
+  config,
+  stats,
 }: {
-  metric: Metric;
-  signal?: BaselineSignal;
+  config: SignalConfig;
+  stats?: SignalStats;
 }) {
+  const deviation = stats?.deviation_percent ?? 0;
+  const hasDeviation =
+    typeof stats?.deviation_percent === "number";
+
   return (
-    <Card className="border-slate-800 bg-slate-900/80 transition-colors hover:border-violet-500/30">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-slate-300">
-            {metric.label}
-          </p>
-
-          {signal?.deviation_percent != null && (
-            <span className="rounded-full bg-violet-500/10 px-2 py-1 text-xs text-violet-300">
-              {signed(signal.deviation_percent)}
-            </span>
-          )}
-        </div>
-
-        <p className="mt-4 text-2xl font-semibold text-slate-100">
-          {formatMetric(signal?.current, metric)}
+    <div className="rounded-2xl border border-[#E3EAE2] bg-white p-5 transition-colors hover:border-[#BDD2C0]">
+      <div className="mb-5 flex items-start justify-between gap-2">
+        <p className="text-sm font-medium text-[#6F8073]">
+          {config.label}
         </p>
 
-        <div className="mt-5 space-y-3 border-t border-slate-800 pt-4">
-          <div className="flex justify-between gap-2 text-xs">
-            <span className="text-slate-500">
-              Personal baseline
-            </span>
-            <span className="text-slate-300">
-              {formatMetric(signal?.baseline, metric)}
-            </span>
-          </div>
+        {hasDeviation && (
+          <span
+            className={[
+              "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+              Math.abs(deviation) < 5
+                ? "bg-[#EEF3EC] text-[#708575]"
+                : "bg-[#F4EEE5] text-[#AD8050]",
+            ].join(" ")}
+          >
+            {deviation > 0 ? "+" : ""}
+            {deviation.toFixed(1)}%
+          </span>
+        )}
+      </div>
 
-          <div className="flex justify-between gap-2">
-            <span className="text-xs text-slate-500">
-              Recent trend
-            </span>
-            <TrendIndicator trend={signal?.trend} />
-          </div>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[29px] font-semibold tracking-tight text-[#304A38]">
+          {formatValue(stats?.current, config.decimals)}
+        </span>
 
-          <div className="flex justify-between gap-2 text-xs">
-            <span className="text-slate-500">
-              Volatility
-            </span>
-            <span className="text-slate-300">
-              {formatNumber(signal?.volatility, 2)}
-            </span>
-          </div>
+        <span className="text-xs text-[#8B9B8F]">
+          {config.unit}
+        </span>
+      </div>
+
+      <div className="mt-5 border-t border-[#EDF1EB] pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-[#91A095]">
+            Personal baseline
+          </span>
+
+          <span className="text-xs font-semibold text-[#536B58]">
+            {formatValue(stats?.baseline, config.decimals)}
+            {" "}
+            {config.unit}
+          </span>
         </div>
-      </CardContent>
-    </Card>
+
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className="text-xs text-[#91A095]">
+            Recent trend
+          </span>
+
+          <span className="text-xs font-medium text-[#63816B]">
+            {getTrendText(stats?.trend ?? "")}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
-// Each outcome contains one or two findings:
-// one for below-baseline days and one for above-baseline days.
-type OutcomeGroup = {
-  outcome: string;
-  findings: Pattern[];
-};
+function PatternCard({
+  pattern,
+}: {
+  pattern: Pattern;
+}) {
+  const difference =
+    pattern.difference_percentage_points;
 
-type SignalGroup = {
-  signal: string;
-  outcomes: OutcomeGroup[];
-  findingCount: number;
-  maxDifference: number;
-};
-
-function groupPatterns(patterns: Pattern[]): SignalGroup[] {
-  const signalMap = new Map<
-    string,
-    Map<string, Pattern[]>
-  >();
-
-  for (const pattern of patterns) {
-    if (!signalMap.has(pattern.signal)) {
-      signalMap.set(pattern.signal, new Map());
-    }
-
-    const outcomeMap = signalMap.get(pattern.signal)!;
-
-    if (!outcomeMap.has(pattern.outcome)) {
-      outcomeMap.set(pattern.outcome, []);
-    }
-
-    outcomeMap.get(pattern.outcome)!.push(pattern);
-  }
-
-  return Array.from(signalMap.entries())
-    .map(([signal, outcomeMap]) => {
-      const outcomes = Array.from(outcomeMap.entries())
-        .map(([outcome, findings]) => ({
-          outcome,
-          findings: [...findings].sort(
-            (a, b) =>
-              Math.abs(b.difference_percentage_points) -
-              Math.abs(a.difference_percentage_points)
-          ),
-        }))
-        .sort(
-          (a, b) =>
-            Math.max(
-              ...b.findings.map(item =>
-                Math.abs(item.difference_percentage_points)
-              )
-            ) -
-            Math.max(
-              ...a.findings.map(item =>
-                Math.abs(item.difference_percentage_points)
-              )
-            )
-        );
-
-      const allFindings = outcomes.flatMap(
-        outcome => outcome.findings
-      );
-
-      return {
-        signal,
-        outcomes,
-        findingCount: allFindings.length,
-        maxDifference: Math.max(
-          0,
-          ...allFindings.map(item =>
-            Math.abs(item.difference_percentage_points)
-          )
-        ),
-      };
-    })
-    .sort((a, b) => b.maxDifference - a.maxDifference);
-}
-
-function EvidenceCard({ pattern }: { pattern: Pattern }) {
-  const [showEvidence, setShowEvidence] = useState(false);
-
-  const higher = pattern.difference_percentage_points > 0;
+  const higher = difference > 0;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-xl border border-[#E3EAE2] bg-white p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-200">
-            {pattern.direction === 'below'
-              ? 'Below personal baseline'
-              : 'Above personal baseline'}
+          <p className="text-sm font-semibold text-[#354B3B]">
+            {prettyLabel(pattern.signal)}
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
-            At least {pattern.baseline_deviation_threshold}{' '}
-            from baseline
-          </p>
-        </div>
-
-        <div className="text-right">
-          <span
-            className={`inline-block rounded-full px-3 py-1.5 text-xs font-semibold ${
-              higher
-                ? 'bg-amber-500/10 text-amber-300'
-                : 'bg-emerald-500/10 text-emerald-300'
-            }`}
-          >
-            {signed(
-              pattern.difference_percentage_points,
-              ' pp'
-            )}
-          </span>
-
-          <p className="mt-1 text-xs text-slate-500">
-            {higher
-              ? 'Higher observed frequency'
-              : 'Lower observed frequency'}
+          <p className="mt-1 text-xs text-[#8A9A8E]">
+            {pattern.direction === "above"
+              ? "Above"
+              : "Below"}{" "}
+            personal baseline by at least{" "}
+            {pattern.baseline_deviation_threshold}
           </p>
         </div>
+
+        <span
+          className={[
+            "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold",
+            higher
+              ? "bg-[#FAEDE7] text-[#B9755D]"
+              : "bg-[#E8F3E9] text-[#4D8762]",
+          ].join(" ")}
+        >
+          {higher ? (
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowDownRight className="h-3.5 w-3.5" />
+          )}
+
+          {higher ? "+" : ""}
+          {difference.toFixed(1)} pp
+        </span>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
-          <p className="text-xs text-slate-500">
-            When condition occurred
+        <div className="rounded-xl bg-[#F4F8F2] p-4">
+          <p className="text-xs text-[#849587]">
+            Condition days
           </p>
 
-          <p className="mt-2 text-xl font-semibold text-violet-300">
-            {formatNumber(pattern.event_rate_exposed)}%
+          <p className="mt-2 text-2xl font-semibold text-[#355B46]">
+            {pattern.event_rate_exposed.toFixed(1)}%
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
-            {pattern.exposed_event_count} events /{' '}
+          <p className="mt-1 text-[11px] text-[#8B9C8D]">
+            {pattern.exposed_event_count} events
+            {" / "}
             {pattern.exposed_days} days
           </p>
         </div>
 
-        <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-          <p className="text-xs text-slate-500">
+        <div className="rounded-xl bg-[#F7F8F5] p-4">
+          <p className="text-xs text-[#849587]">
             Comparison days
           </p>
 
-          <p className="mt-2 text-xl font-semibold text-slate-200">
-            {formatNumber(pattern.event_rate_comparison)}%
+          <p className="mt-2 text-2xl font-semibold text-[#526456]">
+            {pattern.event_rate_comparison.toFixed(1)}%
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
-            {pattern.comparison_event_count} events /{' '}
+          <p className="mt-1 text-[11px] text-[#8B9C8D]">
+            {pattern.comparison_event_count} events
+            {" / "}
             {pattern.comparison_days} days
           </p>
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowEvidence(!showEvidence)}
-        className="mt-4 flex w-full items-center justify-between border-t border-slate-800 pt-3 text-xs text-slate-400 hover:text-violet-300"
-      >
-        {showEvidence ? 'Hide details' : 'View evidence'}
-
-        {showEvidence ? (
-          <ChevronUp className="h-4 w-4" />
-        ) : (
-          <ChevronDown className="h-4 w-4" />
-        )}
-      </button>
-
-      {showEvidence && (
-        <div className="mt-3 space-y-2 text-xs text-slate-400">
-          <div className="flex justify-between gap-3">
-            <span>Next-day lag</span>
-            <span>{pattern.lag_days} day(s)</span>
-          </div>
-
-          <div className="flex justify-between gap-3">
-            <span>Exposed observations</span>
-            <span>{pattern.exposed_days}</span>
-          </div>
-
-          <div className="flex justify-between gap-3">
-            <span>Comparison observations</span>
-            <span>{pattern.comparison_days}</span>
-          </div>
-
-          <p className="pt-2 leading-relaxed text-slate-500">
-            This comparison is exploratory. It does not
-            establish that the signal caused the outcome.
-          </p>
-        </div>
-      )}
+      <p className="mt-4 text-xs leading-relaxed text-[#8B9B8E]">
+        Observed {pattern.lag_days} day
+        {pattern.lag_days === 1 ? "" : "s"} later.
+        This is an association, not evidence of causation.
+      </p>
     </div>
-  );
-}
-
-function SignalPatternGroup({
-  group,
-  defaultOpen,
-}: {
-  group: SignalGroup;
-  defaultOpen: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <Card className="overflow-hidden border-slate-800 bg-slate-900/80">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-slate-800/40"
-      >
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10">
-            <Activity className="h-5 w-5 text-violet-400" />
-          </div>
-
-          <div>
-            <h3 className="text-base font-semibold text-slate-100">
-              {labelFor(group.signal)}
-            </h3>
-
-            <p className="mt-1 text-xs text-slate-500">
-              {group.outcomes.length}{' '}
-              {group.outcomes.length === 1
-                ? 'associated outcome'
-                : 'associated outcomes'}
-              {' · '}
-              {group.findingCount}{' '}
-              {group.findingCount === 1
-                ? 'finding'
-                : 'findings'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-3">
-          <span className="hidden rounded-full bg-violet-500/10 px-3 py-1.5 text-xs text-violet-300 sm:inline-block">
-            Up to {formatNumber(group.maxDifference)} pp
-          </span>
-
-          {open ? (
-            <ChevronUp className="h-5 w-5 text-slate-400" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-slate-400" />
-          )}
-        </div>
-      </button>
-
-      {open && (
-        <CardContent className="space-y-6 border-t border-slate-800 p-5">
-          {group.outcomes.map(outcomeGroup => (
-            <section key={outcomeGroup.outcome}>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <HeartPulse className="h-4 w-4 text-violet-400" />
-
-                <h4 className="text-sm font-semibold text-slate-200">
-                  {labelFor(outcomeGroup.outcome)}
-                </h4>
-
-                <span className="text-xs text-slate-500">
-                  — next-day association
-                </span>
-              </div>
-
-              <div
-                className={`grid gap-3 ${
-                  outcomeGroup.findings.length > 1
-                    ? 'md:grid-cols-2'
-                    : 'grid-cols-1'
-                }`}
-              >
-                {outcomeGroup.findings.map(pattern => (
-                  <EvidenceCard
-                    key={`${pattern.signal}-${pattern.outcome}-${pattern.direction}`}
-                    pattern={pattern}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </CardContent>
-      )}
-    </Card>
   );
 }
 
@@ -561,49 +407,43 @@ export default function Profile() {
     useState<PatternsResponse | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [error, setError] =
-    useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] =
+    useState<string[]>([
+      "Daily habits",
+      "Vital measurements",
+      "Energy and recovery",
+    ]);
 
-  const [outcomeFilter, setOutcomeFilter] =
-    useState('all');
+  const [selectedOutcome, setSelectedOutcome] =
+    useState<string>("all");
 
-  const [showAllGroups, setShowAllGroups] =
+  const [showAllPatterns, setShowAllPatterns] =
     useState(false);
 
   useEffect(() => {
     let active = true;
 
-    async function fetchData() {
-      setLoading(true);
-      setError(null);
-      setBaseline(null);
-      setPatterns(null);
+    setLoading(true);
+    setError(null);
+    setBaseline(null);
+    setPatterns(null);
 
-      if (!selectedUserId) {
-        setLoading(false);
-        return;
-      }
+    if (!selectedUserId) {
+      setLoading(false);
+      return;
+    }
 
+    async function fetchProfile() {
       try {
         const [baselineResponse, patternsResponse] =
           await Promise.all([
-            api.getBaseline(selectedUserId),
-            api.getPatterns(selectedUserId),
+            api.getBaseline(selectedUserId!),
+            api.getPatterns(selectedUserId!),
           ]);
 
         if (!active) return;
-
-        // The Profile requires the upgraded API contracts.
-        if (
-          !baselineResponse?.signals ||
-          !Array.isArray(patternsResponse?.patterns)
-        ) {
-          throw new Error(
-            'The backend returned the legacy API format. ' +
-            'Check that the 2.0 routers are registered first.'
-          );
-        }
 
         setBaseline(baselineResponse);
         setPatterns(patternsResponse);
@@ -611,55 +451,77 @@ export default function Profile() {
         if (!active) return;
 
         console.error(err);
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Could not load your health profile.'
-        );
+        setError("Unable to load your health profile.");
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    fetchData();
+    fetchProfile();
 
     return () => {
       active = false;
     };
   }, [selectedUserId]);
 
-  const signalGroups = useMemo(() => {
-    const allPatterns = patterns?.patterns || [];
+  const sortedPatterns = useMemo(() => {
+    return [...(patterns?.patterns ?? [])].sort(
+      (a, b) =>
+        Math.abs(b.difference_percentage_points) -
+        Math.abs(a.difference_percentage_points)
+    );
+  }, [patterns]);
 
-    const filtered =
-      outcomeFilter === 'all'
-        ? allPatterns
-        : allPatterns.filter(
-            pattern => pattern.outcome === outcomeFilter
+  const availableOutcomes = useMemo(() => {
+    return Array.from(
+      new Set(sortedPatterns.map((pattern) => pattern.outcome))
+    ).sort();
+  }, [sortedPatterns]);
+
+  const filteredPatterns = useMemo(() => {
+    const matching =
+      selectedOutcome === "all"
+        ? sortedPatterns
+        : sortedPatterns.filter(
+            (pattern) =>
+              pattern.outcome === selectedOutcome
           );
 
-    return groupPatterns(filtered);
-  }, [patterns, outcomeFilter]);
+    return showAllPatterns
+      ? matching
+      : matching.slice(0, 6);
+  }, [
+    selectedOutcome,
+    sortedPatterns,
+    showAllPatterns,
+  ]);
 
-  const visibleGroups = showAllGroups
-    ? signalGroups
-    : signalGroups.slice(0, 4);
+  const matchingPatternCount =
+    selectedOutcome === "all"
+      ? sortedPatterns.length
+      : sortedPatterns.filter(
+          (pattern) =>
+            pattern.outcome === selectedOutcome
+        ).length;
 
-  const availableSignals = METRICS.filter(
-    metric => baseline?.signals?.[metric.key] != null
-  ).length;
+  function toggleGroup(title: string) {
+    setExpandedGroups((previous) =>
+      previous.includes(title)
+        ? previous.filter((item) => item !== title)
+        : [...previous, title]
+    );
+  }
 
   if (loading) {
     return (
-      <div className="space-y-5">
-        <div className="h-28 animate-pulse rounded-xl bg-slate-800/50" />
+      <div className="mx-auto max-w-6xl space-y-6 pb-12">
+        <div className="h-24 animate-pulse rounded-2xl bg-[#EAF0E9]" />
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}
-              className="h-44 animate-pulse rounded-xl bg-slate-800/50"
+              className="h-48 animate-pulse rounded-2xl bg-[#EDF2EC]"
             />
           ))}
         </div>
@@ -667,251 +529,282 @@ export default function Profile() {
     );
   }
 
-  if (!baseline || !patterns) {
+  if (error || !baseline || !patterns) {
     return (
-      <Card className="border-slate-800 bg-slate-900">
-        <CardContent className="flex items-center gap-3 p-6">
-          <AlertCircle className="h-5 w-5 shrink-0 text-amber-400" />
-
-          <p className="text-sm text-slate-300">
-            {error || 'Select a user to view their profile.'}
-          </p>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-[#EBCFC4] bg-[#FFF7F2] p-6 text-sm text-[#AC705D]">
+        {error ?? "Profile data is unavailable."}
+      </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-9 pb-12">
+    <div className="mx-auto max-w-6xl space-y-10 pb-12 text-[#304439]">
+      {/* Profile overview */}
+      <section className="overflow-hidden rounded-[22px] border border-[#DFE9DE] bg-white">
+        <div className="flex flex-col justify-between gap-6 p-7 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-5">
+            <div className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-2xl bg-[#E8F1E7]">
+              <Shield className="h-8 w-8 text-[#456E53]" />
+            </div>
 
-      {/* PROFILE HEADER */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8CA08F]">
+                Personal health profile
+              </p>
 
-      <section className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-violet-950/30 p-6 md:p-8">
-        <div className="flex flex-wrap items-center gap-5">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-500/30 bg-violet-500/10">
-            <Shield className="h-8 w-8 text-violet-400" />
-          </div>
-
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold text-slate-100">
+              <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-[#2E4937]">
                 {selectedUserId}
               </h1>
 
-              <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-300">
-                Health Profile 2.0
-              </span>
-            </div>
-
-            <p className="mt-2 text-sm text-slate-400">
-              Personal baselines, recent trends and
-              discovered health associations.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-5 text-xs text-slate-500">
-              <span className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4" />
-                {patterns.days_available} days of history
-              </span>
-
-              <span className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                {availableSignals} signals
-              </span>
-
-              <span className="flex items-center gap-2">
-                <BrainCircuit className="h-4 w-4" />
-                {patterns.patterns.length} findings
-              </span>
+              <p className="mt-1 text-sm text-[#859588]">
+                Your health signals and discovered patterns
+              </p>
             </div>
           </div>
 
-          <div>
-            <p className="text-xs text-slate-500">
-              Latest record
-            </p>
+          <div className="flex flex-wrap gap-3">
+            <div className="rounded-xl bg-[#F3F7F1] px-5 py-4">
+              <div className="flex items-center gap-2 text-xs text-[#849587]">
+                <Clock3 className="h-3.5 w-3.5" />
+                Recorded history
+              </div>
 
-            <p className="mt-1 text-sm font-medium text-slate-200">
-              {formatDate(baseline.date)}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* PERSONAL BASELINE */}
-
-      <section className="space-y-6">
-        <div className="flex items-center gap-3">
-          <HeartPulse className="h-5 w-5 text-violet-400" />
-
-          <div>
-            <h2 className="text-xl font-semibold text-slate-100">
-              Your Personal Baseline
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Current measurements compared with your
-              recent {baseline.baseline_window_days}-day baseline.
-            </p>
-          </div>
-        </div>
-
-        {GROUPS.map(group => (
-          <div key={group.title} className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-300">
-                {group.title}
-              </h3>
-
-              <p className="mt-1 text-xs text-slate-500">
-                {group.description}
+              <p className="mt-2 text-2xl font-semibold text-[#355B46]">
+                {patterns.days_available}
+                <span className="ml-1 text-xs font-normal text-[#8B9B8E]">
+                  days
+                </span>
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {group.metrics.map(metric => (
-                <MetricCard
-                  key={metric.key}
-                  metric={metric}
-                  signal={baseline.signals[metric.key]}
-                />
-              ))}
+            <div className="rounded-xl bg-[#F3F7F1] px-5 py-4">
+              <div className="flex items-center gap-2 text-xs text-[#849587]">
+                <Activity className="h-3.5 w-3.5" />
+                Health signals
+              </div>
+
+              <p className="mt-2 text-2xl font-semibold text-[#355B46]">
+                {Object.keys(baseline.signals ?? {}).length}
+              </p>
             </div>
           </div>
-        ))}
+        </div>
+
+        <div className="border-t border-[#E8EEE6] bg-[#F8FAF6] px-7 py-3">
+          <p className="text-xs text-[#819183]">
+            Latest record: {baseline.date}
+            <span className="mx-2 text-[#C1CCC0]">•</span>
+            Baselines use the preceding{" "}
+            {baseline.baseline_window_days} days
+          </p>
+        </div>
       </section>
 
-      {/* DISCOVERED PATTERNS */}
+      {/* Personal baselines */}
+      <section className="space-y-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <HeartPulse className="h-5 w-5 text-[#527B5C]" />
 
-      <section className="space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Your personal baseline
+            </h2>
+          </div>
+
+          <p className="mt-2 text-sm leading-relaxed text-[#87978A]">
+            Your latest recorded measurements compared
+            with your recent personal history.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {SIGNAL_GROUPS.map((group) => {
+            const expanded =
+              expandedGroups.includes(group.title);
+
+            return (
+              <div
+                key={group.title}
+                className="overflow-hidden rounded-2xl border border-[#E2E9E1] bg-[#FBFCFA]"
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    toggleGroup(group.title)
+                  }
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-[#F4F8F2] sm:px-6"
+                >
+                  <div>
+                    <h3 className="text-base font-semibold text-[#35503D]">
+                      {group.title}
+                    </h3>
+
+                    <p className="mt-1 text-xs text-[#8B9A8D]">
+                      {group.description}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="rounded-full bg-[#EAF2E9] px-3 py-1 text-xs font-medium text-[#63816B]">
+                      {group.signals.length} signals
+                    </span>
+
+                    {expanded ? (
+                      <ChevronDown className="h-5 w-5 text-[#78907D]" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-[#78907D]" />
+                    )}
+                  </div>
+                </button>
+
+                {expanded && (
+                  <div className="grid gap-4 border-t border-[#E8EEE6] p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-5">
+                    {group.signals.map((config) => (
+                      <SignalCard
+                        key={config.key}
+                        config={config}
+                        stats={
+                          baseline.signals?.[config.key]
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Pattern discovery */}
+      <section className="space-y-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <div className="flex items-center gap-3">
-              <BrainCircuit className="h-5 w-5 text-violet-400" />
+            <div className="flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-[#527B5C]" />
 
-              <h2 className="text-xl font-semibold text-slate-100">
-                What LifePrint Has Learned
+              <h2 className="text-xl font-semibold tracking-tight">
+                What LifePrint has discovered
               </h2>
             </div>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Findings grouped by health signal and
-              next-day outcome. Expand a signal to
-              explore its evidence.
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#87978A]">
+              Exploratory associations between changes
+              in your health signals and outcomes
+              recorded the following day.
             </p>
           </div>
 
-          <select
-            aria-label="Filter patterns by outcome"
-            value={outcomeFilter}
-            onChange={event => {
-              setOutcomeFilter(event.target.value);
-              setShowAllGroups(false);
-            }}
-            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-200 outline-none focus:border-violet-500"
-          >
-            <option value="all">All outcomes</option>
+          <div className="rounded-xl border border-[#DCE8DA] bg-[#F1F7EF] px-4 py-3">
+            <p className="text-xs text-[#7C947F]">
+              Discovered patterns
+            </p>
 
-            {Object.entries(OUTCOMES).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
+            <p className="mt-1 text-2xl font-semibold text-[#355B46]">
+              {patterns.patterns_found}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#E2E9E1] bg-white p-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-[#719278]" />
+
+            <span className="text-sm font-medium text-[#607563]">
+              Filter findings
+            </span>
+          </div>
+
+          <select
+            aria-label="Filter by health outcome"
+            value={selectedOutcome}
+            onChange={(event) => {
+              setSelectedOutcome(event.target.value);
+              setShowAllPatterns(false);
+            }}
+            className="min-w-[190px] rounded-xl border border-[#DFE8DD] bg-[#F8FAF7] px-4 py-2.5 text-sm font-medium text-[#45644D] outline-none focus:border-[#9FBEA4]"
+          >
+            <option value="all">
+              All outcomes
+            </option>
+
+            {availableOutcomes.map((outcome) => (
+              <option
+                key={outcome}
+                value={outcome}
+              >
+                {prettyLabel(outcome)}
               </option>
             ))}
           </select>
         </div>
 
-        {/* COMPACT SUMMARY */}
-
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="border-slate-800 bg-slate-900/80">
-            <CardContent className="p-5">
-              <p className="text-xs uppercase tracking-wider text-slate-500">
-                Health Signals With Findings
-              </p>
-
-              <p className="mt-3 text-3xl font-semibold text-violet-300">
-                {signalGroups.length}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-slate-900/80">
-            <CardContent className="p-5">
-              <p className="text-xs uppercase tracking-wider text-slate-500">
-                Findings in This View
-              </p>
-
-              <p className="mt-3 text-3xl font-semibold text-slate-100">
-                {signalGroups.reduce(
-                  (sum, group) => sum + group.findingCount,
-                  0
-                )}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {signalGroups.length === 0 ? (
-          <Card className="border-slate-800 bg-slate-900/80">
-            <CardContent className="py-12 text-center">
-              <BrainCircuit className="mx-auto mb-4 h-8 w-8 text-slate-600" />
-
-              <p className="text-sm text-slate-300">
-                No findings for this outcome.
-              </p>
-
-              <p className="mt-2 text-xs text-slate-500">
-                Try another outcome filter.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
+        {filteredPatterns.length > 0 ? (
           <>
-            <div className="space-y-3">
-              {visibleGroups.map((group, index) => (
-                <SignalPatternGroup
-                  key={`${selectedUserId}-${outcomeFilter}-${group.signal}`}
-                  group={group}
-                  defaultOpen={index === 0}
-                />
+            <div className="grid gap-4 md:grid-cols-2">
+              {filteredPatterns.map((pattern, index) => (
+                <div key={`${pattern.signal}-${pattern.outcome}-${pattern.direction}-${index}`}>
+                  <div className="mb-2 px-1">
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#829687]">
+                      {prettyLabel(pattern.outcome)}
+                    </span>
+                  </div>
+
+                  <PatternCard pattern={pattern} />
+                </div>
               ))}
             </div>
 
-            {signalGroups.length > 4 && (
-              <button
-                type="button"
-                onClick={() => setShowAllGroups(!showAllGroups)}
-                className="mx-auto flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-violet-500/50 hover:text-violet-300"
-              >
-                {showAllGroups
-                  ? 'Show fewer signals'
-                  : `View all ${signalGroups.length} signals`}
-
-                {showAllGroups ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
+            {matchingPatternCount > 6 && (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowAllPatterns((previous) => !previous)
+                  }
+                  className="rounded-xl border border-[#DCE8DA] bg-white px-5 py-3 text-sm font-semibold text-[#456E53] transition-colors hover:bg-[#F2F7F0]"
+                >
+                  {showAllPatterns
+                    ? "Show fewer findings"
+                    : `Show all ${matchingPatternCount} findings`}
+                </button>
+              </div>
             )}
           </>
+        ) : (
+          <div className="rounded-2xl border border-[#E2E9E1] bg-white px-6 py-12 text-center">
+            <BrainCircuit className="mx-auto h-8 w-8 text-[#A7BAA9]" />
+
+            <h3 className="mt-4 font-semibold text-[#4E6654]">
+              No patterns found
+            </h3>
+
+            <p className="mt-2 text-sm text-[#91A095]">
+              There are no findings for this outcome
+              with the current observation requirements.
+            </p>
+          </div>
         )}
       </section>
 
-      {/* DISCLAIMER */}
+      {/* Research disclaimer */}
+      <div className="flex items-start gap-3 rounded-2xl border border-[#DDE9DA] bg-[#F2F7F0] p-5">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#638B6C]" />
 
-      <div className="flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-5">
-        <Info className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+        <div>
+          <h3 className="text-sm font-semibold text-[#456E53]">
+            About your health profile
+          </h3>
 
-        <p className="text-xs leading-relaxed text-slate-500">
-          LifePrint currently uses expanded synthetic
-          health data. These findings are exploratory
-          associations from multiple comparisons, not
-          clinical predictions or evidence of causation.
-          Percentage-point differences describe observed
-          event frequencies, not changes in individual
-          medical risk.
-        </p>
+          <p className="mt-1 text-xs leading-relaxed text-[#7C9180]">
+            LifePrint is a synthetic-data research
+            prototype. Personal baselines describe
+            recorded measurements, while discovered
+            patterns are exploratory associations.
+            They are not clinically validated and
+            do not establish causation.
+          </p>
+        </div>
       </div>
     </div>
   );
