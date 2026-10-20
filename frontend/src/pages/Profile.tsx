@@ -398,7 +398,15 @@ function PatternCard({
 }
 
 export default function Profile() {
-  const { selectedUserId } = useUser();
+  const {
+    selectedUserId,
+    activeConditionId,
+    activeCondition,
+    availableConditions,
+    setActiveConditionId,
+  } = useUser();
+
+  const [userConditionProfile, setUserConditionProfile] = useState<any>(null);
 
   const [baseline, setBaseline] =
     useState<BaselineResponse | null>(null);
@@ -437,16 +445,18 @@ export default function Profile() {
 
     async function fetchProfile() {
       try {
-        const [baselineResponse, patternsResponse] =
+        const [baselineResponse, patternsResponse, condResponse] =
           await Promise.all([
             api.getBaseline(selectedUserId!),
             api.getPatterns(selectedUserId!),
+            api.getUserCondition(selectedUserId!).catch(() => null),
           ]);
 
         if (!active) return;
 
         setBaseline(baselineResponse);
         setPatterns(patternsResponse);
+        setUserConditionProfile(condResponse);
       } catch (err) {
         if (!active) return;
 
@@ -597,6 +607,94 @@ export default function Profile() {
             Baselines use the preceding{" "}
             {baseline.baseline_window_days} days
           </p>
+        </div>
+      </section>
+
+      {/* Condition & Digital Twin Preferences (LifePrint 3.0) */}
+      <section className="overflow-hidden rounded-[22px] border border-[#DFE9DE] bg-white p-7 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EAF2E9]">
+              <HeartPulse className="h-5 w-5 text-[#456E53]" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8CA08F]">
+                Digital Twin Configuration
+              </p>
+              <h2 className="text-xl font-semibold tracking-tight text-[#2E4937]">
+                {activeCondition?.name || "Cardiovascular & Blood Pressure Monitoring"}
+              </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="profile-condition-select" className="text-xs text-[#859588] font-medium">
+              Active Focus:
+            </label>
+            <select
+              id="profile-condition-select"
+              value={activeConditionId || "cardiovascular_bp"}
+              onChange={(e) => setActiveConditionId(e.target.value)}
+              className="rounded-xl border border-[#DCE7DC] bg-[#FAFCF9] px-3 py-2 text-xs font-semibold text-[#3B5943] outline-none"
+            >
+              {availableConditions.map((cond) => (
+                <option key={cond.id} value={cond.id}>
+                  {cond.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <p className="text-sm leading-relaxed text-[#819087]">
+          {activeCondition?.description ||
+            "Exploratory longitudinal tracking of blood pressure, resting heart rate, and lifestyle load factors in synthetic health records."}
+        </p>
+
+        {/* Self-selected reference markers */}
+        <div className="space-y-3 pt-4 border-t border-[#EDF0EB]">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[#35503D]">
+              Self-Selected Reference Markers
+            </h3>
+            <span className="text-xs text-[#8A9B8D] italic">
+              Optional visual bounds • NOT medical targets
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl bg-[#F8FAF6] p-4 border border-[#E4ECE3]">
+              <div className="text-xs font-medium text-[#7D8E80]">Systolic BP Marker</div>
+              <div className="mt-1 text-base font-semibold text-[#2E4836]">
+                {userConditionProfile?.custom_reference_ranges?.systolic_bp?.min ?? 95} – {userConditionProfile?.custom_reference_ranges?.systolic_bp?.max ?? 130} <span className="text-xs font-normal text-[#8A9B8D]">mmHg</span>
+              </div>
+              <div className="text-[10px] text-[#93A395] mt-1">Self-selected display range</div>
+            </div>
+
+            <div className="rounded-xl bg-[#F8FAF6] p-4 border border-[#E4ECE3]">
+              <div className="text-xs font-medium text-[#7D8E80]">Diastolic BP Marker</div>
+              <div className="mt-1 text-base font-semibold text-[#2E4836]">
+                {userConditionProfile?.custom_reference_ranges?.diastolic_bp?.min ?? 60} – {userConditionProfile?.custom_reference_ranges?.diastolic_bp?.max ?? 85} <span className="text-xs font-normal text-[#8A9B8D]">mmHg</span>
+              </div>
+              <div className="text-[10px] text-[#93A395] mt-1">Self-selected display range</div>
+            </div>
+
+            <div className="rounded-xl bg-[#F8FAF6] p-4 border border-[#E4ECE3]">
+              <div className="text-xs font-medium text-[#7D8E80]">Resting Heart Rate Marker</div>
+              <div className="mt-1 text-base font-semibold text-[#2E4836]">
+                {userConditionProfile?.custom_reference_ranges?.resting_hr?.min ?? 50} – {userConditionProfile?.custom_reference_ranges?.resting_hr?.max ?? 80} <span className="text-xs font-normal text-[#8A9B8D]">bpm</span>
+              </div>
+              <div className="text-[10px] text-[#93A395] mt-1">Self-selected display range</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-xl bg-[#F4F8F2] p-3 text-xs text-[#63846B]">
+            <Info className="h-4 w-4 shrink-0 mt-0.5 text-[#52795B]" />
+            <p>
+              Note: Reference markers are user-selected visualization guides for this synthetic research prototype.
+              They do not constitute medical advice, clinical target ranges, or diagnostic thresholds.
+            </p>
+          </div>
         </div>
       </section>
 

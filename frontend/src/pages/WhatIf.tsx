@@ -261,11 +261,13 @@ function OutcomeCard({
   label,
   result,
   selected,
+  isConditionFocus,
   onClick,
 }: {
   label: string;
   result: OutcomeResult;
   selected: boolean;
+  isConditionFocus?: boolean;
   onClick: () => void;
 }) {
   const difference = result.difference_percentage_points;
@@ -283,9 +285,16 @@ function OutcomeCard({
       ].join(" ")}
     >
       <div className="mb-5 flex items-start justify-between gap-3">
-        <h3 className="text-sm font-semibold text-[#34473A]">
-          {label}
-        </h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-semibold text-[#34473A]">
+            {label}
+          </h3>
+          {isConditionFocus && (
+            <span className="rounded-full bg-[#E5F0E7] px-2 py-0.5 text-[10px] font-semibold text-[#3D694B]">
+              Condition Focus
+            </span>
+          )}
+        </div>
 
         <span
           className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -329,7 +338,7 @@ function OutcomeCard({
 }
 
 export default function WhatIf() {
-  const { selectedUserId } = useUser();
+  const { selectedUserId, activeConditionId, activeCondition } = useUser();
 
   const [initialInputs, setInitialInputs] =
     useState<Inputs | null>(null);
@@ -347,6 +356,13 @@ export default function WhatIf() {
   const [error, setError] = useState<string | null>(null);
 
   const requestId = useRef(0);
+
+  // Automatically focus on condition target when active condition is set
+  useEffect(() => {
+    if (activeConditionId === 'cardiovascular_bp') {
+      setSelectedOutcome('bp_elevation');
+    }
+  }, [activeConditionId]);
 
   // Load the user's latest recorded values.
   useEffect(() => {
@@ -540,6 +556,20 @@ export default function WhatIf() {
           Reset changes
         </button>
       </div>
+
+      {activeCondition && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#DCE7DC] bg-[#F7FAF6] px-5 py-3 text-xs text-[#526B57]">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-[#2F4936]">Active Digital Twin Focus:</span>
+            <span>{activeCondition.name}</span>
+            <span className="text-[#8FA092]">•</span>
+            <span>Prioritizing synthetic {activeCondition.target_outcomes?.[0]?.replace(/_/g, ' ')} simulation</span>
+          </div>
+          <span className="text-[11px] text-[#7A8C7D] italic">
+            Synthetic research simulation • Not clinical predictions
+          </span>
+        </div>
+      )}
 
       {/* Main layout */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_370px]">
@@ -831,6 +861,9 @@ export default function WhatIf() {
                   result={result}
                   selected={
                     selectedOutcome === outcome.key
+                  }
+                  isConditionFocus={
+                    activeConditionId === 'cardiovascular_bp' && outcome.key === 'bp_elevation'
                   }
                   onClick={() =>
                     setSelectedOutcome(outcome.key)

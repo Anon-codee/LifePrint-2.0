@@ -1,0 +1,44 @@
+{
+  "U002": {
+    "user_id": "U002",
+    "active_condition_id": "cardiovascular_bp",
+    "custom_reference_ranges": {
+      "systolic_bp": {
+        "min": 95.0,
+        "max": 130.0,
+        "unit": "mmHg",
+        "label": "Self-selected systolic reference"
+      },
+      "diastolic_bp": {
+        "min": 60.0,
+        "max": 85.0,
+        "unit": "mmHg",
+        "label": "Self-selected diastolic reference"
+      },
+      "resting_hr": {
+        "min": 50.0,
+        "max": 80.0,
+        "unit": "bpm",
+        "label": "Self-selected resting HR reference"
+      }
+    },
+    "notes": "Initialized for local research twin prototype.",
+    "created_at": "2026-10-20T08:20:26.591729+00:00",
+    "updated_at": "2026-10-20T08:20:26.591729+00:00"
+  },
+  "U001": {
+    "user_id": "U001",
+    "active_condition_id": "cardiovascular_bp",
+    "custom_reference_ranges": {
+      "systolic_bp": {
+        "min": 92.0,
+        "max": 128.0,
+        "unit": null,
+        "label": "Self-selected systolic"
+      }
+    },
+    "notes": "Cardio focus set for prototype",
+    "created_at": "2026-10-20T08:20:28.620813+00:00",
+    "updated_at": "2026-10-20T08:47:31.706768+00:00"
+  }
+}

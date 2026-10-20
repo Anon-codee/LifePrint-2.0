@@ -45,6 +45,22 @@ def run_all_tests():
         response = client.post("/api/users/U001/what-if", json=payload)
         assert response.status_code == 200, "What-If failed"
 
+        # LifePrint 3.0 Condition Endpoints
+        response = client.get("/api/conditions")
+        assert response.status_code == 200, "Conditions failed"
+
+        response = client.get("/api/users/U001/condition")
+        assert response.status_code == 200, "User condition failed"
+
+        response = client.get("/api/users/INVALID/condition")
+        assert response.status_code == 404, "Invalid user condition failed"
+
+        response = client.get("/api/users/U001/twin-status")
+        assert response.status_code == 200, "Twin status failed"
+
+        response = client.get("/api/users/INVALID/twin-status")
+        assert response.status_code == 404, "Invalid user twin status failed"
+
         print("All API tests passed!")
 
 if __name__ == "__main__":

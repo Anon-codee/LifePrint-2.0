@@ -17,11 +17,10 @@ export const api = {
     return res.data;
   },
   getTodayHealth: async (userId: string) => {
-  const res = await apiClient.get(
-    `/api/users/${userId}/today-v2`
-  );
-
-  return res.data;
+    const res = await apiClient.get(
+      `/api/users/${userId}/today-v2`
+    );
+    return res.data;
   },
   getBaseline: async (userId: string) => {
     const res = await apiClient.get(`/api/users/${userId}/baseline`);
@@ -44,10 +43,10 @@ export const api = {
     return res.data;
   },
   getGraphV2: async (userId: string) => {
-  const res = await apiClient.get(
-    `/api/users/${userId}/graph-v2`
-  );
-  return res.data;
+    const res = await apiClient.get(
+      `/api/users/${userId}/graph-v2`
+    );
+    return res.data;
   },
   getTimeline: async (userId: string) => {
     const res = await apiClient.get(`/api/users/${userId}/timeline`);
@@ -58,20 +57,42 @@ export const api = {
     return res.data;
   },
   simulateWhatIfV2: async (
-  userId: string,
-  data: {
-    sleep_hours: number;
-    hydration_liters: number;
-    stress: number;
-    activity_steps: number;
-    caffeine: number;
-  }
-) => {
-  const response = await apiClient.post(
-    `/api/users/${userId}/what-if-v2`,
-    data
-  );
-
-  return response.data;
-},
+    userId: string,
+    data: {
+      sleep_hours: number;
+      hydration_liters: number;
+      stress: number;
+      activity_steps: number;
+      caffeine: number;
+    }
+  ) => {
+    const response = await apiClient.post(
+      `/api/users/${userId}/what-if-v2`,
+      data
+    );
+    return response.data;
+  },
+  getConditions: async () => {
+    const res = await apiClient.get('/api/conditions');
+    return res.data;
+  },
+  getUserCondition: async (userId: string) => {
+    const res = await apiClient.get(`/api/users/${userId}/condition`);
+    return res.data;
+  },
+  setUserCondition: async (
+    userId: string,
+    data: {
+      condition_id?: string;
+      custom_reference_ranges?: Record<string, { min: number; max: number; label?: string; unit?: string }>;
+      notes?: string;
+    }
+  ) => {
+    const res = await apiClient.post(`/api/users/${userId}/condition`, data);
+    return res.data;
+  },
+  getTwinStatus: async (userId: string) => {
+    const res = await apiClient.get(`/api/users/${userId}/twin-status`);
+    return res.data;
+  },
 };

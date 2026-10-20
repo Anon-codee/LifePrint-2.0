@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   ChevronDown,
+  HeartPulse,
   LayoutDashboard,
   Network,
   SlidersHorizontal,
@@ -31,6 +32,9 @@ export function Header({ title, subtitle }: HeaderProps) {
     selectedUserId,
     setSelectedUserId,
     availableUsers,
+    availableConditions,
+    activeConditionId,
+    setActiveConditionId,
   } = useUser();
 
   return (
@@ -42,7 +46,7 @@ export function Header({ title, subtitle }: HeaderProps) {
             <Activity className="h-4 w-4 text-[#285943]" />
 
             <span className="text-xs font-semibold tracking-tight text-[#285943]">
-              LifePrint
+              LifePrint 3.0
             </span>
           </div>
 
@@ -57,42 +61,78 @@ export function Header({ title, subtitle }: HeaderProps) {
           )}
         </div>
 
-        {/* User selector */}
-        <div className="shrink-0">
-          <label
-            htmlFor="lifeprint-user"
-            className="mb-1.5 hidden text-[10px] font-semibold uppercase tracking-[0.13em] text-[#9AA69C] md:block"
-          >
-            Viewing profile
-          </label>
-
-          <div className="relative flex min-w-[112px] items-center gap-2 rounded-xl border border-[#E1E9E0] bg-white/90 px-3 py-2.5 shadow-[0_2px_10px_rgba(39,73,48,0.03)] transition-colors hover:border-[#B7CEBA]">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E9F1E9]">
-              <UserRound className="h-3.5 w-3.5 text-[#477C56]" />
-            </div>
-
-            <select
-              id="lifeprint-user"
-              aria-label="Select health profile"
-              value={selectedUserId || ''}
-              onChange={event =>
-                setSelectedUserId(event.target.value)
-              }
-              disabled={availableUsers.length === 0}
-              className="min-w-0 max-w-[100px] flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-5 text-[13px] font-semibold text-[#315440] outline-none focus:ring-0"
+        {/* Selectors: Condition & User */}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Condition Selector */}
+          <div className="shrink-0">
+            <label
+              htmlFor="lifeprint-condition"
+              className="mb-1.5 hidden text-[10px] font-semibold uppercase tracking-[0.13em] text-[#9AA69C] md:block"
             >
-              {availableUsers.length === 0 && (
-                <option value="">No users</option>
-              )}
+              Digital Twin Focus
+            </label>
 
-              {availableUsers.map(userId => (
-                <option key={userId} value={userId}>
-                  {userId}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex items-center gap-2 rounded-xl border border-[#E1E9E0] bg-white/90 px-3 py-2.5 shadow-[0_2px_10px_rgba(39,73,48,0.03)] transition-colors hover:border-[#B7CEBA]">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E9F1E9]">
+                <HeartPulse className="h-3.5 w-3.5 text-[#477C56]" />
+              </div>
 
-            <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-[#809584]" />
+              <select
+                id="lifeprint-condition"
+                aria-label="Select digital twin condition"
+                value={activeConditionId || 'cardiovascular_bp'}
+                onChange={event => setActiveConditionId(event.target.value)}
+                disabled={availableConditions.length === 0}
+                className="min-w-0 max-w-[130px] sm:max-w-[190px] cursor-pointer appearance-none border-0 bg-transparent pr-5 text-[13px] font-semibold text-[#315440] outline-none focus:ring-0 truncate"
+              >
+                {availableConditions.map(cond => (
+                  <option key={cond.id} value={cond.id}>
+                    {cond.name}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-[#809584]" />
+            </div>
+          </div>
+
+          {/* User selector */}
+          <div className="shrink-0">
+            <label
+              htmlFor="lifeprint-user"
+              className="mb-1.5 hidden text-[10px] font-semibold uppercase tracking-[0.13em] text-[#9AA69C] md:block"
+            >
+              Viewing profile
+            </label>
+
+            <div className="relative flex min-w-[112px] items-center gap-2 rounded-xl border border-[#E1E9E0] bg-white/90 px-3 py-2.5 shadow-[0_2px_10px_rgba(39,73,48,0.03)] transition-colors hover:border-[#B7CEBA]">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E9F1E9]">
+                <UserRound className="h-3.5 w-3.5 text-[#477C56]" />
+              </div>
+
+              <select
+                id="lifeprint-user"
+                aria-label="Select health profile"
+                value={selectedUserId || ''}
+                onChange={event =>
+                  setSelectedUserId(event.target.value)
+                }
+                disabled={availableUsers.length === 0}
+                className="min-w-0 max-w-[100px] flex-1 cursor-pointer appearance-none border-0 bg-transparent pr-5 text-[13px] font-semibold text-[#315440] outline-none focus:ring-0"
+              >
+                {availableUsers.length === 0 && (
+                  <option value="">No users</option>
+                )}
+
+                {availableUsers.map(userId => (
+                  <option key={userId} value={userId}>
+                    {userId}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 h-3.5 w-3.5 text-[#809584]" />
+            </div>
           </div>
         </div>
       </div>

@@ -11,6 +11,8 @@ from api.health import router as health_router
 from api.users import router as users_router
 from api.prediction import router as prediction_router
 from api.graph import router as graph_router
+from api.what_if import router as what_if_router
+from api.conditions import router as conditions_router
 
 from api.baseline import router as baseline_router
 from api.patterns import router as patterns_router
@@ -33,7 +35,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="LifePrint API",
     description="API for the LifePrint Personalized Health Digital Twin",
-    version="2.0.0",
+    version="3.0.0",
     lifespan=lifespan,
 )
 
@@ -53,8 +55,14 @@ app.add_middleware(
 )
 
 
-# Register the upgraded endpoints FIRST.
+# Register condition and upgraded endpoints FIRST.
 # FastAPI matches duplicate routes in registration order.
+
+app.include_router(
+    conditions_router,
+    prefix="/api",
+    tags=["conditions"],
+)
 
 app.include_router(
     baseline_router,
@@ -111,4 +119,10 @@ app.include_router(
     graph_router,
     prefix="/api/users",
     tags=["graph"],
+)
+
+app.include_router(
+    what_if_router,
+    prefix="/api/users",
+    tags=["what-if"],
 )

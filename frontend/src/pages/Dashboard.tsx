@@ -1,6 +1,8 @@
 
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
+import { useUser } from '../context/UserContext';
 import { Card, CardContent } from '../components/ui/Card';
 
 import {
@@ -326,6 +328,7 @@ function PredictionCard({
 
 export default function Dashboard() {
   const { data, loading, error } = useDashboardData();
+  const { twinStatus } = useUser();
 
   const timeline = data?.timeline ?? [];
 
@@ -542,6 +545,330 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </section>
+
+      {/* ======================================
+          CONDITION-SPECIFIC DIGITAL TWIN (LifePrint 3.0)
+      ====================================== */}
+      {twinStatus && (
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <HeartPulse className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-semibold text-slate-100">
+                  {twinStatus.condition?.name || 'Cardiovascular & BP Monitoring'}
+                </h2>
+              </div>
+              <p className="text-sm text-slate-400">
+                {twinStatus.condition?.tagline || 'Autonomic Stability & Arterial Load'} • Condition-Specific Digital Twin
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-400/20 bg-blue-400/10 text-blue-400 text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              Synthetic Research Twin
+            </div>
+          </div>
+
+          {/* Data Availability & Limitations Card */}
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-300 font-medium">Data Availability:</span>
+                <span>{twinStatus.data_availability?.total_days_recorded} total days recorded</span>
+                <span>•</span>
+                <span>{twinStatus.data_availability?.historical_training_days} historical days modeled</span>
+                <span>•</span>
+                <span>{twinStatus.data_availability?.baseline_window_days}-day rolling baseline window</span>
+              </div>
+              <span className="text-slate-500 text-[11px] italic">
+                {twinStatus.data_availability?.limitations_note}
+              </span>
+            </div>
+            {twinStatus.data_availability?.freshness_note && (
+              <p className="text-[11px] text-slate-500 border-t border-slate-800/60 pt-2">
+                <span className="text-slate-400 font-medium">Data Freshness Reference: </span>
+                {twinStatus.data_availability.freshness_note}
+              </p>
+            )}
+          </div>
+
+          {/* Condition Primary Biometrics Grid */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
+                Condition Primary Biometrics
+              </h3>
+              <span className="text-xs text-slate-500">
+                Prioritized for {twinStatus.condition?.name}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {twinStatus.primary_signals?.map((sig: any) => {
+                const isPos = (sig.deviation_percent ?? 0) > 0;
+                const isFlagged = sig.exploratory_flag?.active;
+                return (
+                  <Card key={sig.signal} className="relative overflow-hidden border-slate-800 bg-slate-900/80">
+                    {isFlagged && (
+                      <div className="absolute top-0 right-0 left-0 h-0.5 bg-amber-400" />
+                    )}
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <span className="text-xs font-medium text-slate-400">
+                          {sig.label}
+                        </span>
+                        <span
+                          className={cn(
+                            'text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5',
+                            (sig.deviation_percent ?? 0) === 0
+                              ? 'text-slate-400 bg-slate-800'
+                              : isPos
+                                ? 'text-amber-400 bg-amber-400/10'
+                                : 'text-blue-400 bg-blue-400/10'
+                          )}
+                        >
+                          {isPos ? '+' : ''}
+                          {(sig.deviation_percent ?? 0).toFixed(1)}%
+                        </span>
+                      </div>
+
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-bold text-slate-100">
+                          {typeof sig.current === 'number'
+                            ? sig.signal === 'activity_steps'
+                              ? Math.round(sig.current).toLocaleString()
+                              : sig.current.toFixed(1)
+                            : '—'}
+                        </span>
+                        <span className="text-xs text-slate-500">{sig.unit}</span>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-400 space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">30d Baseline:</span>
+                          <span className="text-slate-300 font-medium">
+                            {typeof sig.baseline === 'number'
+                              ? sig.signal === 'activity_steps'
+                                ? Math.round(sig.baseline).toLocaleString()
+                                : sig.baseline.toFixed(1)
+                              : '—'}{' '}
+                            {sig.unit}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Trend:</span>
+                          <span className="capitalize text-slate-300">{sig.trend}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-slate-500">Status:</span>
+                          <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 px-1.5 py-0.5 rounded bg-slate-800">
+                            {sig.baseline_status || 'provisional'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {sig.persistent_deviation?.detected && (
+                        <div className="text-[10px] text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20 leading-tight">
+                          <span className="font-semibold block mb-0.5">Persistent Shift Detected</span>
+                          Sustained {sig.persistent_deviation.direction} over {sig.persistent_deviation.consecutive_days}d ({sig.persistent_deviation.average_deviation_percent > 0 ? '+' : ''}{sig.persistent_deviation.average_deviation_percent}%)
+                        </div>
+                      )}
+
+                      {isFlagged && !sig.persistent_deviation?.detected && (
+                        <div className="text-[10px] text-amber-400/90 bg-amber-400/10 px-2 py-1 rounded border border-amber-400/20">
+                          10% baseline deviation (research indicator)
+                        </div>
+                      )}
+
+                      {sig.user_reference_range?.configured && (
+                        <div className="text-[10px] text-slate-400 bg-slate-800/50 px-2 py-1 rounded">
+                          Ref: {sig.user_reference_range.range.min}–{sig.user_reference_range.range.max} {sig.unit}
+                          <span className="block text-[9px] text-slate-500 italic mt-0.5">
+                            Self-selected reference marker
+                          </span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Condition Model Target & What-If Spotlight */}
+          {twinStatus.synthetic_model_estimate && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Synthetic Model Estimate Card */}
+              <Card className="md:col-span-2 border-slate-800 bg-slate-900/80">
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="p-1 rounded bg-blue-500/10 text-blue-400">
+                          <Gauge className="w-4 h-4" />
+                        </span>
+                        <h4 className="text-base font-semibold text-slate-100">
+                          Synthetic {twinStatus.synthetic_model_estimate.target_label} Model Estimate
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Experimental Random Forest probability for current synthetic state
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-slate-100">
+                        {twinStatus.synthetic_model_estimate.synthetic_probability_percent !== null
+                          ? `${twinStatus.synthetic_model_estimate.synthetic_probability_percent.toFixed(1)}%`
+                          : '—'}
+                      </div>
+                      <span className="text-xs text-slate-400 capitalize">
+                        {twinStatus.synthetic_model_estimate.exploratory_frequency_band?.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-5">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, twinStatus.synthetic_model_estimate.synthetic_probability_percent ?? 0))}%`,
+                      }}
+                    />
+                  </div>
+
+                  {/* Contributing Factors */}
+                  {twinStatus.synthetic_model_estimate.contributing_factors?.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-slate-400 mb-2">
+                        Top Model Feature Importances for this Estimate:
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {twinStatus.synthetic_model_estimate.contributing_factors.slice(0, 3).map((f: any) => (
+                          <div key={f.feature} className="p-2 rounded bg-slate-800/40 border border-slate-700/50 text-xs">
+                            <span className="text-slate-300 capitalize">{f.feature.replace(/_/g, ' ')}</span>
+                            <span className="float-right text-slate-400 font-mono">{(f.importance * 100).toFixed(0)}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-500 italic border-t border-slate-800 pt-3">
+                    {twinStatus.synthetic_model_estimate.disclaimer}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* What-If Action Link Card */}
+              <Card className="border-slate-800 bg-gradient-to-br from-slate-900 to-slate-850 flex flex-col justify-between">
+                <CardContent className="p-6 flex flex-col h-full justify-between">
+                  <div>
+                    <div className="p-2 w-fit rounded-lg bg-emerald-500/10 text-emerald-400 mb-3">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-base font-semibold text-slate-100 mb-2">
+                      Simulate Condition Levers
+                    </h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Test hypothetical modifications to daily routine (stress, activity, sleep, caffeine)
+                      and observe simulated changes in BP elevation model output.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-800">
+                    <Link
+                      to="/what-if"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm py-2.5 px-4 transition-colors shadow-sm"
+                    >
+                      Open What-If Simulator
+                      <ArrowUp className="w-4 h-4 rotate-45" />
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Condition-Aware Structured Insights */}
+          {twinStatus.condition_insights?.insights?.length > 0 && (
+            <Card className="border-slate-800 bg-slate-900/60">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-800 pb-4">
+                  <div>
+                    <h4 className="text-base font-semibold text-slate-100">
+                      Condition-Aware Digital Twin Insights
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Adaptive observations prioritized for {twinStatus.condition?.name}
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-slate-500 italic max-w-sm text-right hidden sm:block">
+                    {twinStatus.condition_insights.categorization_guide}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {twinStatus.condition_insights.insights.map((ins: any, idx: number) => {
+                    const badgeStyles: Record<string, string> = {
+                      deviation: "bg-amber-400/10 text-amber-400 border-amber-400/20",
+                      correlation: "bg-blue-400/10 text-blue-400 border-blue-400/20",
+                      model_prediction: "bg-indigo-400/10 text-indigo-400 border-indigo-400/20",
+                    };
+                    const badgeLabels: Record<string, string> = {
+                      deviation: "Baseline Deviation",
+                      correlation: "Statistical Correlation (Lag-1)",
+                      model_prediction: "Synthetic Model Estimate",
+                    };
+
+                    return (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-slate-800/80 bg-slate-800/30 p-4 space-y-2.5 transition-colors hover:border-slate-700"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border",
+                              badgeStyles[ins.insight_type] || "bg-slate-800 text-slate-400"
+                            )}
+                          >
+                            {badgeLabels[ins.insight_type] || ins.insight_type}
+                          </span>
+                          <span className="text-[10px] text-slate-500 capitalize">
+                            {ins.signal.replace(/_/g, " ")}
+                          </span>
+                        </div>
+
+                        <h5 className="text-sm font-medium text-slate-100">
+                          {ins.title}
+                        </h5>
+
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                          {ins.summary}
+                        </p>
+
+                        <div className="pt-2 border-t border-slate-800/60 text-[11px] text-slate-400 space-y-1">
+                          <p className="text-slate-400 leading-normal">
+                            <span className="text-slate-500">Supporting Evidence: </span>
+                            {ins.supporting_detail}
+                          </p>
+                          <p className="text-[10px] text-slate-500 italic">
+                            {ins.condition_relevance}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      )}
 
       {/* ======================================
           PRIMARY HEALTH METRICS
