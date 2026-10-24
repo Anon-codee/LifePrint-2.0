@@ -217,7 +217,7 @@ LifePrint follows a frontend–backend architecture.
 
 ## Prototype Demonstration
 
-**Demonstration Video (20+ minutes):** [Insert video link here]
+**Demonstration Video (20+ minutes):** [Link](https://drive.google.com/file/d/1kQtuHBW9kCBv-0wB--bkDs4Sdxd3Q7nC/view?usp=sharing)
 
 ## Architecture Diagram
 
@@ -362,7 +362,7 @@ Third-party dependencies, datasets, and assets remain subject to their own licen
 | Backend API | [Open Backend](https://lifeprint1.onrender.com) |
 | Architecture Diagram | [View Architecture](https://drive.google.com/file/d/1yhT5a9c93pQe21h9ep-xG_rGM41Au8_I/view?usp=sharing) |
 | Project Presentation | [View Presentation](https://docs.google.com/presentation/d/13bgLzF6DdfERaVwN8Yw9j9-MP5S1ixoE/edit?usp=sharing&ouid=114865145327612651503&rtpof=true&sd=true) |
-| Demonstration Video | [Insert video link here](#prototype-demonstration) |
+| Demonstration Video | [Video link](https://drive.google.com/file/d/1kQtuHBW9kCBv-0wB--bkDs4Sdxd3Q7nC/view?usp=sharing)) |
 | License | [MIT License](LICENSE) |
 
 ## Disclaimer
